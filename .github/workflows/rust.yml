@@ -1,0 +1,80 @@
+name: Rust CI
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        components: clippy
+        override: true
+    
+    - name: Cache Cargo dependencies and target
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+    
+    - name: Cache apt packages
+      uses: actions/cache@v3
+      with:
+        path: /var/cache/apt/archives
+        key: ${{ runner.os }}-apt-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-apt-
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libpcap-dev
+    
+    - name: Create required directories with proper permissions
+      run: |
+        sudo mkdir -p /var/run/netcap
+        sudo chown $USER:$USER /var/run/netcap
+    
+    # - name: Run Clippy               --> Disabled for now, too slow
+    #   uses: actions-rs/cargo@v1
+    #   with:
+    #     command: clippy
+    #     args: -- -D warnings
+    
+    - name: Build
+      uses: actions-rs/cargo@v1
+      with:
+        command: build
+        args: --verbose
+    
+    - name: Run Tests
+      run: |
+        cargo test
+    
+    - name: Run Benchmarks
+      run: |
+        cargo bench
+    
+    # - name: Run Main
+    #   run: |
+    #     cargo run --verbose
+    
+    - name: Clean build artifacts
+      run: cargo clean

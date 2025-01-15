@@ -1,0 +1,9 @@
+[package]
+name = "imap_test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pnet_packet = "0.35.0"
+pnet_transport = "0.35.0"
+pnet = "0.35.0"
